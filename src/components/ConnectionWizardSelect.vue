@@ -24,10 +24,14 @@ const value = computed({
     emit("update:modelValue", value);
   },
 });
+
+const classObject = computed(() => ({
+  disabled: props.disabled,
+}));
 </script>
 
 <template>
-  <label class="wizard-select">
+  <label class="wizard-select" :class="classObject">
     <span class="wizard-select__label">
       {{ props.title }}
     </span>
@@ -44,6 +48,12 @@ const value = computed({
 .wizard-select {
   display: flex;
   flex-direction: column;
+
+  &.disabled {
+    opacity: 0.7;
+
+    pointer-events: none;
+  }
 
   &__label {
     margin: 0 0 8px;
