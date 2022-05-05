@@ -31,17 +31,20 @@ const props = defineProps({
 
   &__title {
     margin: 0 0 16px;
+
     font-weight: 600;
     font-size: 20px;
     line-height: 24px;
   }
 
   &__variants {
-    margin: 0;
-    padding: 0;
-    list-style: none;
     display: flex;
     flex-direction: column;
+    margin: 0;
+    padding: 0;
+
+    list-style: none;
+
     gap: 16px;
   }
 }

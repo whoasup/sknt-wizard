@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref } from "@vue/reactivity";
+import { computed, ref, reactive } from "@vue/reactivity";
+import { useWizardStore } from "../stores/wizard";
 import ConnectionWizardOption from "./ConnectionWizardOption.vue";
 import ConnectionWizardSelect from "./ConnectionWizardSelect.vue";
 
@@ -29,13 +30,60 @@ const props = defineProps({
     required: true,
   },
 });
+
 const selected = ref(false);
+
+const options = reactive(
+  props.options.map((opt) => {
+    return {
+      ...opt,
+      active: false,
+    };
+  })
+);
+
+const selects = reactive(
+  props.select.map((sel) => {
+    return {
+      ...sel,
+      value: 0,
+    };
+  })
+);
+
+const optionsPrice = computed(() => {
+  let price = 0;
+  options.forEach((option) => {
+    option.active ? (price += option.price) : price;
+  });
+
+  return price;
+});
+
+const selectsPrice = computed(() => {
+  let price = 0;
+  selects.forEach((select) => {
+    price += select.value;
+  });
+
+  return price;
+});
+
+const totalPrice = computed(
+  () => props.price_default + optionsPrice.value + selectsPrice.value
+);
+
 const descriptionList = computed(() => props.description.split("\n"));
 const btnText = computed(() => (selected.value ? "Выбрано" : "Выбрать"));
 const btnClass = computed(() => ({ active: selected.value }));
 
+const wizardStore = useWizardStore();
+
 function submitHandler() {
   selected.value = !selected.value;
+  selected.value
+    ? wizardStore.addPrice(props.title, totalPrice.value)
+    : wizardStore.deletePrice(props.title);
 }
 </script>
 
@@ -43,7 +91,7 @@ function submitHandler() {
   <div class="wizard-variant">
     <div class="wizard-variant__header">
       <h2 class="wizard-variant__title">{{ props.title }}</h2>
-      <p class="wizard-variant__price">{{ props.price_default }} &#8381;</p>
+      <p class="wizard-variant__price">{{ totalPrice }} &#8381;</p>
     </div>
     <div class="wizard-variant__wrapper">
       <div class="wizard-variant__info">
@@ -51,20 +99,29 @@ function submitHandler() {
           <p class="wizard-variant__description">{{ text }}</p>
         </template>
       </div>
-      <div class="wizard-variant__options">
+      <div class="wizard-variant__form">
         <form @submit.prevent="submitHandler">
-          <template v-if="props.options.length">
+          <!-- options -->
+          <template v-if="options.length">
             <div class="wizard-variant__options">
-              <template v-for="option in props.options" :key="option.title">
-                <ConnectionWizardOption v-bind="option" />
+              <template v-for="option in options" :key="option.title">
+                <ConnectionWizardOption
+                  v-bind="option"
+                  v-model="option.active"
+                  :disabled="selected"
+                />
               </template>
             </div>
           </template>
-
-          <template v-if="props.select.length">
+          <!-- selects -->
+          <template v-if="selects">
             <div class="wizard-variant__selects">
-              <template v-for="select in props.select" :key="select.title">
-                <ConnectionWizardSelect v-bind="select" />
+              <template v-for="select in selects" :key="select.title">
+                <ConnectionWizardSelect
+                  v-bind="select"
+                  v-model="select.value"
+                  :disabled="selected"
+                />
               </template>
             </div>
           </template>
@@ -81,27 +138,31 @@ function submitHandler() {
 <style lang="scss" scoped>
 .wizard-variant {
   position: relative;
-  background-color: var(--c-basic-grey);
-  border-radius: 8px;
+
   padding: 20px 20px 20px 24px;
   overflow: hidden;
 
+  background-color: var(--c-basic-grey);
+  border-radius: 8px;
+
   &::before {
-    display: block;
-    position: absolute;
     content: "";
-    left: 0;
+    position: absolute;
     top: 0;
     bottom: 0;
+    left: 0;
+
+    display: block;
     width: 4px;
+
     background-color: v-bind("props.color");
   }
 
   &__header {
-    margin: 0 0 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin: 0 0 8px;
   }
 
   &__title {
@@ -118,12 +179,15 @@ function submitHandler() {
 
   &__wrapper {
     display: grid;
-    grid-template-columns: 1fr 200px;
+
     column-gap: 20px;
+
+    grid-template-columns: 1fr 200px;
   }
 
   &__info {
     display: grid;
+
     row-gap: 8px;
   }
 
@@ -133,29 +197,40 @@ function submitHandler() {
     line-height: 20px;
   }
 
-  &__options {
+  &__options,
+  &__selects {
+    display: grid;
+    margin: 0 0 8px;
+
+    row-gap: 8px;
+  }
+
+  &__form {
     display: flex;
   }
 
   form {
-    width: 100%;
     display: flex;
     flex-direction: column;
+    width: 100%;
   }
 
   &__btn {
-    margin: auto 0 0;
     display: flex;
-    background-color: var(--c-light-black);
-    border: none;
     justify-content: center;
     align-items: center;
-    padding: 10px;
     width: 100%;
-    border-radius: 4px;
+    margin: auto 0 0;
+    padding: 10px;
+
     color: var(--c-basic-white);
+
+    background-color: var(--c-light-black);
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
     opacity: 1;
+
     transition: opacity 300ms ease, background-color 300ms ease;
 
     @media (hover: hover), screen and (min-width: 0\0) {
